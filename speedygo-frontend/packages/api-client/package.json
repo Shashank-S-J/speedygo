@@ -1,0 +1,17 @@
+{
+  "name": "@speedygo/api-client",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "@speedygo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
+

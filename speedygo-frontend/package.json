@@ -1,0 +1,20 @@
+{
+  "name": "speedygo-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "type-check": "turbo type-check",
+    "dev:customer": "turbo dev --filter=@speedygo/customer",
+    "dev:transporter": "turbo dev --filter=@speedygo/transporter",
+    "dev:admin": "turbo dev --filter=@speedygo/admin"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3",
+    "prettier": "^3.4.2"
+  },
+  "packageManager": "pnpm@10.33.2"
+}

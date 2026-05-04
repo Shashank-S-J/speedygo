@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  # ─── PostgreSQL ───
+  postgres:
+    image: postgres:16-alpine
+    container_name: speedygo-postgres
+    environment:
+      POSTGRES_USER: speedygo
+      POSTGRES_PASSWORD: speedygo
+      POSTGRES_DB: speedygo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U speedygo"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── Redis ───
+  redis:
+    image: redis:7-alpine
+    container_name: speedygo-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── NATS JetStream ───
+  nats:
+    image: nats:2.10-alpine
+    container_name: speedygo-nats
+    command: ["--js", "--store_dir", "/data", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"  # monitoring
+    volumes:
+      - natsdata:/data
+
+  # ─── SpeedyGo API Gateway ───
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: speedygo-gateway
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      REDIS_ADDR: redis:6379
+      NATS_URL: nats://nats:4222
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  natsdata:
