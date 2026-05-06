@@ -2,6 +2,8 @@ module github.com/speedygo/speedygo
 
 go 1.24
 
+toolchain go1.25.0
+
 require (
 	github.com/gofiber/contrib/websocket v1.3.4
 	github.com/gofiber/fiber/v2 v2.52.13
