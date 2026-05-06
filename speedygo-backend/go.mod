@@ -1,6 +1,6 @@
 module github.com/speedygo/speedygo
 
-go 1.23.0
+go 1.24
 
 require (
 	github.com/gofiber/contrib/websocket v1.3.4
