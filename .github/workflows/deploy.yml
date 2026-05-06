@@ -1,0 +1,126 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  # Detect what changed to avoid unnecessary CI runs
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'speedygo-backend/**'
+            frontend:
+              - 'speedygo-frontend/**'
+
+  # Backend: test & build (Render auto-deploys from GitHub — no hook needed)
+  test-backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: speedygo
+          POSTGRES_PASSWORD: speedygo
+          POSTGRES_DB: speedygo_test
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: speedygo-backend/go.sum
+
+      - name: Build & Test
+        working-directory: speedygo-backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: speedygo
+          DB_PASSWORD: speedygo
+          DB_NAME: speedygo_test
+          REDIS_ADDR: localhost:6379
+          JWT_SECRET: test-secret-for-ci
+          ENVIRONMENT: development
+        run: |
+          go mod download
+          go build ./...
+          go test ./... -race -count=1
+
+      - name: Deploy Status
+        run: |
+          echo "✅ Backend tests passed"
+          echo "🚀 Render auto-deploys from master branch — no action needed"
+
+  # Frontend: type-check & build (Vercel auto-deploys from GitHub — no hook needed)
+  test-frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: speedygo-frontend/pnpm-lock.yaml
+
+      - name: Install & Build
+        working-directory: speedygo-frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://speedygo.onrender.com
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Deploy Status
+        run: |
+          echo "✅ Frontend build passed"
+          echo "🚀 Vercel auto-deploys from master branch — no action needed"
+
+  # Summary
+  summary:
+    needs: [test-backend, test-frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Test Status | Deploy |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend (Render) | ${{ needs.test-backend.result || 'skipped' }} | Auto-deploy from master |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (Vercel) | ${{ needs.test-frontend.result || 'skipped' }} | Auto-deploy from master |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Both Render and Vercel watch the master branch and deploy automatically on push." >> $GITHUB_STEP_SUMMARY
