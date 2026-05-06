@@ -51,6 +51,7 @@ type RedisConfig struct {
 	Addr     string
 	Password string
 	DB       int
+	UseTLS   bool
 }
 
 type NATSConfig struct {
@@ -124,6 +125,7 @@ func Load() *Config {
 			Addr:     getEnv("REDIS_ADDR", "localhost:6379"),
 			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       getIntEnv("REDIS_DB", 0),
+			UseTLS:   getEnv("REDIS_TLS", "false") == "true" || getEnv("REDIS_PASSWORD", "") != "",
 		},
 		NATS: NATSConfig{
 			URL:       getEnv("NATS_URL", "nats://localhost:4222"),
