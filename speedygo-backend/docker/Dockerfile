@@ -11,7 +11,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOTOOLCHAIN=auto go build -ldflags="-s -w" -o /gateway ./cmd/gateway
+RUN CGO_ENABLED=0 GOOS=linux GOTOOLCHAIN=auto go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux GOTOOLCHAIN=auto go build -ldflags="-s -w" -o /gateway ./cmd/gateway
 
 # Stage 2: Runtime (distroless-like)
 FROM alpine:3.19
