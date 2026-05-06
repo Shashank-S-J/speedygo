@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -274,6 +275,11 @@ func (s *Service) createUserDirectly(email, phone, fullName string, role models.
 	}
 
 	if err := s.repo.Create(user); err != nil {
+		// Handle DB unique constraint violation (race condition between check and insert)
+		errStr := err.Error()
+		if strings.Contains(errStr, "duplicate") || strings.Contains(errStr, "unique") || strings.Contains(errStr, "UNIQUE") {
+			return nil, apperr.Conflict("Email or phone already registered")
+		}
 		return nil, apperr.Internal("Failed to create user", err)
 	}
 

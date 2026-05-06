@@ -128,7 +128,7 @@ func main() {
 
 	paymentRepo := payment.NewRepository(db)
 	paymentSvc := payment.NewService(paymentRepo, bus, slog)
-	paymentHandler := payment.NewHandler(paymentSvc)
+	paymentHandler := payment.NewHandler(paymentSvc, cfg)
 
 	kycRepo := kyc.NewRepository(db)
 	diditClient := kyc.NewDiditClient(cfg.KYC)

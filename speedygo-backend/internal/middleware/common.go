@@ -60,14 +60,16 @@ func CORS(allowedOrigins ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		origin := c.Get("Origin")
 
-		// Determine if this origin is allowed
-		if allowAll || originSet[origin] {
-			if origin != "" {
-				c.Set("Access-Control-Allow-Origin", origin)
-			} else {
-				c.Set("Access-Control-Allow-Origin", "*")
-			}
-		} else if origin != "" {
+		// Determine if this origin is allowed and set headers accordingly.
+		// Key rule: Access-Control-Allow-Credentials: true requires a specific origin, never "*".
+		if origin != "" && (allowAll || originSet[origin]) {
+			// Reflect the specific requesting origin (required for credentials)
+			c.Set("Access-Control-Allow-Origin", origin)
+			c.Set("Access-Control-Allow-Credentials", "true")
+		} else if origin == "" {
+			// No Origin header (same-origin, curl, server-to-server) — allow without credentials
+			c.Set("Access-Control-Allow-Origin", "*")
+		} else {
 			// Origin not allowed — don't set CORS headers, browser will block
 			if c.Method() == fiber.MethodOptions {
 				return c.SendStatus(fiber.StatusForbidden)
@@ -78,7 +80,6 @@ func CORS(allowedOrigins ...string) fiber.Handler {
 		c.Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
 		c.Set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Request-ID,X-Admin-Password")
 		c.Set("Access-Control-Expose-Headers", "X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining,Retry-After")
-		c.Set("Access-Control-Allow-Credentials", "true")
 		c.Set("Access-Control-Max-Age", "86400")
 		c.Set("Vary", "Origin")
 

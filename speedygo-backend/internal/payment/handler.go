@@ -2,20 +2,20 @@ package payment
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 
 	apperr "github.com/speedygo/speedygo/internal/errors"
+	"github.com/speedygo/speedygo/internal/config"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stripe/stripe-go/v76/webhook"
 )
 
 type Handler struct {
 	svc *Service
+	cfg *config.Config
 }
 
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(svc *Service, cfg *config.Config) *Handler {
+	return &Handler{svc: svc, cfg: cfg}
 }
 
 // InitiatePayment POST /payments/initiate
@@ -59,10 +59,16 @@ func (h *Handler) InitiatePayment(c *fiber.Ctx) error {
 func (h *Handler) StripeWebhook(c *fiber.Ctx) error {
 	payload := c.Body()
 	sigHeader := c.Get("Stripe-Signature")
-	webhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
+	webhookSecret := h.cfg.Stripe.WebhookSecret
+
+	if webhookSecret == "" {
+		h.svc.log.Error("STRIPE_WEBHOOK_SECRET not configured — rejecting webhook")
+		return c.SendStatus(500)
+	}
 
 	event, err := webhook.ConstructEvent(payload, sigHeader, webhookSecret)
 	if err != nil {
+		h.svc.log.Warn("stripe webhook signature verification failed", "error", err)
 		return c.SendStatus(400)
 	}
 
@@ -91,7 +97,7 @@ func (h *Handler) StripeWebhook(c *fiber.Ctx) error {
 		}
 
 	default:
-		fmt.Printf("Unhandled webhook event: %s\n", event.Type)
+		h.svc.log.Info("unhandled stripe webhook event", "type", event.Type)
 	}
 
 	return c.SendStatus(200)

@@ -52,7 +52,10 @@ func (h *Handler) CreateBooking(c *fiber.Ctx) error {
 
 // GetBooking GET /bookings/:id
 func (h *Handler) GetBooking(c *fiber.Ctx) error {
-	userID, _ := c.Locals("userID").(uint)
+	userID, ok := c.Locals("userID").(uint)
+	if !ok || userID == 0 {
+		return c.Status(401).JSON(fiber.Map{"error": true, "message": "Unauthorized"})
+	}
 	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
 	if err != nil || id == 0 {
 		return c.Status(400).JSON(fiber.Map{"error": true, "message": "Invalid booking ID"})
@@ -94,7 +97,10 @@ func (h *Handler) GetBooking(c *fiber.Ctx) error {
 
 // GetMyBookings GET /bookings/my
 func (h *Handler) GetMyBookings(c *fiber.Ctx) error {
-	userID, _ := c.Locals("userID").(uint)
+	userID, ok := c.Locals("userID").(uint)
+	if !ok || userID == 0 {
+		return c.Status(401).JSON(fiber.Map{"error": true, "message": "Unauthorized"})
+	}
 	role, _ := c.Locals("role").(models.UserRole)
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
@@ -373,4 +379,3 @@ func (h *Handler) SetAvailability(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{"ok": true, "available": body.Available})
 }
-
