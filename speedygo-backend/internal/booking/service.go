@@ -2,9 +2,11 @@ package booking
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"log/slog"
 	"math"
+	"math/big"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -501,8 +503,8 @@ func (s *Service) AcceptBooking(bookingID, transporterID, vehicleID uint) (*mode
 		})
 	}
 
-	// Generate pickup verification OTP (4-digit)
-	pickupOTP := fmt.Sprintf("%04d", time.Now().UnixNano()%10000)
+	// Generate pickup verification OTP (4-digit, cryptographically random)
+	pickupOTP := generateSecureOTP()
 	s.repo.UpdatePickupOTP(bookingID, pickupOTP)
 
 	return s.repo.FindByID(bookingID)
@@ -640,7 +642,7 @@ func (s *Service) VerifyBookingOTP(bookingID, userID uint, email, code string) (
 }
 
 // VerifyPickupOTP verifies the OTP given by customer to transporter at pickup.
-// Transitions booking from PICKING_UP to IN_TRANSIT.
+// Transitions booking from PICKING_UP to IN_TRANSIT using optimistic locking.
 func (s *Service) VerifyPickupOTP(bookingID, transporterID uint, code string) (*models.Booking, error) {
 	b, err := s.repo.FindByID(bookingID)
 	if err != nil {
@@ -656,13 +658,17 @@ func (s *Service) VerifyPickupOTP(bookingID, transporterID uint, code string) (*
 		return nil, apperr.BadRequest("Invalid OTP")
 	}
 
+	// Use optimistic lock to prevent concurrent state transitions
+	if err := s.repo.UpdateStatus(bookingID, models.BookingInTransit, b.Version); err != nil {
+		return nil, apperr.Conflict("Booking was modified by another request. Please retry.")
+	}
+
 	now := time.Now()
 	b.Status = models.BookingInTransit
+	b.Version++
 	b.PickedUpAt = &now
 	b.PickupOTP = "" // Clear OTP after verification
-	if err := s.repo.Update(b); err != nil {
-		return nil, apperr.Internal("Failed to update booking", err)
-	}
+	s.repo.Update(b)
 
 	if s.bus != nil {
 		s.bus.Publish("booking.in_transit", map[string]interface{}{
@@ -730,6 +736,7 @@ func (s *Service) RateCustomer(bookingID, transporterID uint, rating float64) (*
 }
 
 // CompleteBooking marks booking as completed by transporter.
+// Uses optimistic locking to prevent concurrent state changes.
 func (s *Service) CompleteBooking(bookingID, transporterID uint) (*models.Booking, error) {
 	b, err := s.repo.FindByID(bookingID)
 	if err != nil {
@@ -745,13 +752,19 @@ func (s *Service) CompleteBooking(bookingID, transporterID uint) (*models.Bookin
 	if b.DeliveryPhotos == nil || string(b.DeliveryPhotos) == "null" || string(b.DeliveryPhotos) == "[]" {
 		return nil, apperr.BadRequest("Delivery photos required before marking complete. Upload via POST /bookings/:id/photos")
 	}
+
+	// Optimistic lock: prevent concurrent completion
+	if err := s.repo.UpdateStatus(bookingID, models.BookingCompleted, b.Version); err != nil {
+		return nil, apperr.Conflict("Booking was modified by another request. Please retry.")
+	}
+
 	now := time.Now()
 	b.Status = models.BookingCompleted
+	b.Version++
 	b.CompletedAt = &now
 	b.DeliveredAt = &now
-	if err := s.repo.Update(b); err != nil {
-		return nil, apperr.Internal("Failed to complete booking", err)
-	}
+	s.repo.Update(b)
+
 	if s.bus != nil {
 		s.bus.Publish("booking.completed", map[string]interface{}{
 			"booking_id": bookingID, "transporter_id": transporterID, "customer_id": b.CustomerID,
@@ -783,3 +796,12 @@ func (s *Service) SetTransporterAvailability(userID uint, available bool) error 
 	return nil
 }
 
+// generateSecureOTP generates a cryptographically random 4-digit OTP.
+func generateSecureOTP() string {
+	n, err := rand.Int(rand.Reader, big.NewInt(10000))
+	if err != nil {
+		// Fallback: extremely unlikely but handle gracefully
+		return "0000"
+	}
+	return fmt.Sprintf("%04d", n.Int64())
+}
