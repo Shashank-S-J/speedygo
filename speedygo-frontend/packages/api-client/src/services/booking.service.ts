@@ -9,7 +9,7 @@ export const bookingService = {
     apiClient.post<BookingEstimateResponse>('/bookings/estimate', data).then(r => r.data),
 
   create: (data: CreateBookingRequest) =>
-    apiClient.post<Booking>('/bookings/', data).then(r => r.data),
+    apiClient.post<Booking>('/bookings', data).then(r => r.data),
 
   list: (params?: { limit?: number; offset?: number }) =>
     apiClient.get<PaginatedResponse<Booking>>('/bookings/my', { params }).then(r => r.data),
