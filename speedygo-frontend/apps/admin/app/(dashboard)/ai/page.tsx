@@ -14,7 +14,7 @@ export default function AIQueryPage() {
   const queryMut = useMutation({
     mutationFn: (query: string) => adminService.aiQuery({ query }),
     onSuccess: (data) => {
-      setMessages((prev) => [...prev, { role: 'assistant', content: typeof data.result === 'string' ? data.result : JSON.stringify(data, null, 2) }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: typeof data.content === 'string' ? data.content : JSON.stringify(data, null, 2) }]);
     },
     onError: () => setMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, I could not process that query. Please try again.' }]),
   });

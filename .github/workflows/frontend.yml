@@ -1,0 +1,56 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "speedygo-frontend/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "speedygo-frontend/**"
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: speedygo-frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: speedygo-frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        working-directory: speedygo-frontend
+        run: pnpm type-check
+        continue-on-error: true
+
+      - name: Build all apps
+        working-directory: speedygo-frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://speedygo-0zzt.onrender.com
+        run: pnpm build
+
+      # Vercel auto-deploys on push to main — no manual trigger needed.
+      # Each Vercel project is connected to this repo and watches its root directory.
+      - name: Deploy status
+        if: github.event_name == 'push'
+        run: |
+          echo "✅ Frontend build passed — Vercel will auto-deploy:"
+          echo "   Customer:    https://speedygo-customer.vercel.app"
+          echo "   Transporter: https://speedygo-transporter.vercel.app"
+          echo "   Admin:       https://speedygo-admin.vercel.app"

@@ -1,0 +1,83 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "speedygo-backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "speedygo-backend/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: speedygo
+          POSTGRES_PASSWORD: speedygo
+          POSTGRES_DB: speedygo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: speedygo-backend/go.sum
+
+      - name: Download dependencies
+        working-directory: speedygo-backend
+        run: go mod download
+
+      - name: Build
+        working-directory: speedygo-backend
+        run: go build ./...
+
+      - name: Run tests
+        working-directory: speedygo-backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: speedygo
+          DB_PASSWORD: speedygo
+          DB_NAME: speedygo_test
+          REDIS_ADDR: localhost:6379
+          JWT_SECRET: test-secret-for-ci
+          ENVIRONMENT: development
+        run: go test ./... -v -race -count=1
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+      - name: Deploy Status
+        run: |
+          echo "✅ Backend tests passed"
+          echo "🚀 Render auto-deploys from master branch — no manual trigger needed"
+          echo "   Service URL: https://speedygo.onrender.com"
