@@ -98,7 +98,7 @@ jobs:
       - name: Install & Build
         working-directory: speedygo-frontend
         env:
-          NEXT_PUBLIC_API_URL: https://speedygo.onrender.com
+          NEXT_PUBLIC_API_URL: https://speedygo.0zzt.onrender.com
         run: |
           pnpm install --frozen-lockfile
           pnpm build
