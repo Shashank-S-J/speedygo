@@ -13,7 +13,7 @@
     "@speedygo/types": "workspace:*",
     "@speedygo/api-client": "workspace:*",
     "@speedygo/three-scene": "workspace:*",
-    "next": "15.3.1",
+    "next": "15.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.3",
