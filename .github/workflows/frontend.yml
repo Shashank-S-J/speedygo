@@ -42,7 +42,7 @@ jobs:
       - name: Build all apps
         working-directory: speedygo-frontend
         env:
-          NEXT_PUBLIC_API_URL: https://speedygo.onrender.com
+          NEXT_PUBLIC_API_URL: https://speedygo-0zzt.onrender.com
         run: pnpm build
 
       # Vercel auto-deploys on push to main — no manual trigger needed.
