@@ -27,7 +27,8 @@ export default function ChatPage() {
     }).catch(() => {});
 
     // Connect WS
-    const client = new ChatClient(id);
+    const token = useAuthStore.getState().accessToken ?? '';
+    const client = new ChatClient(id, token);
     clientRef.current = client;
     const unsubMsg = client.onMessage((msg) => appendMessage(id, msg));
     const unsubStatus = client.onStatus((c) => setConnected(id, c));

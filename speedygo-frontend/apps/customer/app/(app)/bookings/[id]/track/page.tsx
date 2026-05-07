@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { GPSWatchClient } from '@speedygo/ws-client';
 import { useTrackingStore } from '@/store/trackingStore';
+import { useAuthStore } from '@/store/authStore';
 import { mapService, bookingService } from '@speedygo/api-client';
 import { haversineMeters } from '@speedygo/map';
 import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/maplibre';
@@ -36,7 +37,8 @@ export default function TrackPage() {
 
   // WebSocket connection
   useEffect(() => {
-    const client = new GPSWatchClient(id);
+    const token = useAuthStore.getState().accessToken ?? '';
+    const client = new GPSWatchClient(id, token);
     clientRef.current = client;
     const unsubMsg = client.onLocationUpdate((loc) => { setVehicleLocation(loc); setNoSignal(false); });
     const unsubStatus = client.onStatus(setConnected);

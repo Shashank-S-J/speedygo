@@ -5,6 +5,7 @@ import { bookingService, getApiError } from '@speedygo/api-client';
 import { useEffect, useRef, useState } from 'react';
 import { GPSPublishClient } from '@speedygo/ws-client';
 import { useGPSStore } from '@/store/gpsStore';
+import { useAuthStore } from '@/store/authStore';
 import { Booking } from '@speedygo/types';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -53,7 +54,8 @@ export default function ActiveTripPage() {
   useEffect(() => {
     if (!booking?.vehicle_id) return;
     if (!['ACCEPTED', 'PICKING_UP', 'IN_TRANSIT'].includes(booking.status)) return;
-    const client = new GPSPublishClient(booking.vehicle_id);
+    const token = useAuthStore.getState().accessToken ?? '';
+    const client = new GPSPublishClient(booking.vehicle_id, token);
     gpsClient.current = client;
     client.onStatus(setWsConnected);
     client.startPublishing(4000);
