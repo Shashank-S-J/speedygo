@@ -20,7 +20,8 @@ export default function TransporterChatPage() {
 
   useEffect(() => {
     chatService.getHistory(bookingId, { limit: 50 }).then((items) => setMessages(items.reverse())).catch(() => {});
-    const client = new ChatClient(bookingId);
+    const token = useAuthStore.getState().accessToken ?? '';
+    const client = new ChatClient(bookingId, token);
     clientRef.current = client;
     const unsubStatus = client.onStatus(setConnected);
     const unsubMessage = client.onMessage((msg) => {
