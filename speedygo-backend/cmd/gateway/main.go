@@ -113,7 +113,11 @@ func main() {
 
 	// OTP Service (email-based, uses Resend free tier)
 	resendKey := os.Getenv("RESEND_API_KEY")
-	otpSvc := otp.NewService(rdb, resendKey, slog)
+	resendFromEmail := os.Getenv("RESEND_FROM_EMAIL")
+	if resendFromEmail == "" {
+		resendFromEmail = "SpeedyGo <noreply@speedygo.in>"
+	}
+	otpSvc := otp.NewService(rdb, resendKey, resendFromEmail, slog)
 
 	userRepo := user.NewRepository(db)
 	userSvc := user.NewService(userRepo, cfg, rdb, otpSvc, slog)
@@ -156,7 +160,7 @@ func main() {
 	trackingHandler := tracking.NewHandler(trackingSvc)
 
 	// Notification Service (NATS consumers)
-	notifSvc := notification.NewService(db, bus, resendKey, slog)
+	notifSvc := notification.NewService(db, bus, resendKey, resendFromEmail, slog)
 	notifSvc.RegisterConsumers()
 
 	// Moderation Service

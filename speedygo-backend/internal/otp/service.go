@@ -57,13 +57,16 @@ type Service struct {
 	fromEmail  string
 }
 
-func NewService(rdb *redis.Client, resendKey string, log *slog.Logger) *Service {
+func NewService(rdb *redis.Client, resendKey, fromEmail string, log *slog.Logger) *Service {
+	if fromEmail == "" {
+		fromEmail = "SpeedyGo <noreply@speedygo.in>"
+	}
 	return &Service{
 		rdb:        rdb,
 		log:        log,
 		resendKey:  resendKey,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
-		fromEmail:  "SpeedyGo <noreply@speedygo.in>",
+		fromEmail:  fromEmail,
 	}
 }
 

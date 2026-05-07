@@ -20,15 +20,20 @@ type Service struct {
 	log        *slog.Logger
 	resendKey  string
 	httpClient *http.Client
+	fromEmail  string
 }
 
-func NewService(db *gorm.DB, bus *natsbus.Bus, resendKey string, log *slog.Logger) *Service {
+func NewService(db *gorm.DB, bus *natsbus.Bus, resendKey, fromEmail string, log *slog.Logger) *Service {
+	if fromEmail == "" {
+		fromEmail = "SpeedyGo <noreply@speedygo.in>"
+	}
 	return &Service{
 		db:         db,
 		bus:        bus,
 		log:        log,
 		resendKey:  resendKey,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
+		fromEmail:  fromEmail,
 	}
 }
 
@@ -67,7 +72,7 @@ func (s *Service) SendEmail(to, subject, htmlBody string) error {
 	}
 
 	payload, _ := json.Marshal(map[string]interface{}{
-		"from":    "SpeedyGo <noreply@speedygo.in>",
+		"from":    s.fromEmail,
 		"to":      []string{to},
 		"subject": subject,
 		"html":    htmlBody,
