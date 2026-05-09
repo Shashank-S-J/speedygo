@@ -7,7 +7,6 @@
 ## 📌 Table of Contents
 
 - [Project Overview](#-project-overview)
-- [Live Demo / Screenshots](#-architecture-at-a-glance)
 - [Architecture](#️-system-architecture)
 - [Tech Stack](#-tech-stack)
 - [Microservices Breakdown](#-backend-microservices)
